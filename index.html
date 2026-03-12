@@ -905,8 +905,9 @@ function renderExport() {
   Object.entries(byWeek).forEach(([week, ww]) => {
     out += `═══ Week of ${week} ═══\n\n`;
     ww.forEach(w => {
-      const imp = w.impact === 'BigWin' ? '★ BIG WIN' : w.impact.toUpperCase();
-      out += `  [${imp}] [${w.cat}]\n  ${w.text}\n\n`;
+      const imp     = w.impact === 'BigWin' ? '★ BIG WIN' : w.impact.toUpperCase();
+      const dateStr = new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      out += `  [${dateStr}] [${imp}] [${w.cat}]\n  ${w.text}\n\n`;
     });
   });
   document.getElementById('exportBlock').textContent = out.trim();
