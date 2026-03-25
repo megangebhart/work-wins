@@ -211,6 +211,7 @@
   .impact-btn.sel-Medium { background: #E8F0E4; border-color: var(--sage); color: #4A6840; }
   .impact-btn.sel-High { background: #F0E8DC; border-color: var(--sand); color: #7A5F38; }
   .impact-btn.sel-BigWin { background: var(--ink); border-color: var(--ink); color: var(--linen); }
+  .impact-btn.sel-Meeting { background: #EDE8F5; border-color: #A89BC4; color: #5C4E8A; }
 
   .add-btn {
     padding: 0.6rem 1.3rem;
@@ -324,6 +325,7 @@
   .impact-Medium .win-bar { background: var(--sage); }
   .impact-High .win-bar   { background: var(--sand); }
   .impact-BigWin .win-bar { background: var(--ink); }
+  .impact-Meeting .win-bar { background: #A89BC4; }
 
   .win-body { flex: 1; min-width: 0; }
 
@@ -688,6 +690,7 @@
       <button class="impact-btn" data-impact="Medium" onclick="selectImpact('Medium')">Medium</button>
       <button class="impact-btn" data-impact="High"   onclick="selectImpact('High')">High</button>
       <button class="impact-btn" data-impact="BigWin" onclick="selectImpact('BigWin')">★ Big Win</button>
+      <button class="impact-btn" data-impact="Meeting" onclick="selectImpact('Meeting')">◈ Meeting</button>
       <button class="add-btn"    onclick="addWin()">+ Add Win</button>
     </div>
 
@@ -958,7 +961,7 @@ function buildList(listId, items, emptyMsg) {
   }
   list.innerHTML = items.map(w => {
     const dateStr  = new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const impLabel = w.impact === 'BigWin' ? '★ Big Win' : w.impact;
+    const impLabel = w.impact === 'BigWin' ? '★ Big Win' : w.impact === 'Meeting' ? '◈ Meeting' : w.impact;
     const syncBadge = w.synced
       ? `<span class="synced">✓ synced</span>`
       : `<span class="unsynced"><span style="font-size:8px">●</span> unsynced</span>`;
@@ -1075,7 +1078,7 @@ function renderExport() {
   Object.entries(byWeek).forEach(([week, ww]) => {
     out += `═══ Week of ${week} ═══\n\n`;
     ww.forEach(w => {
-      const imp     = w.impact === 'BigWin' ? '★ BIG WIN' : w.impact.toUpperCase();
+      const imp     = w.impact === 'BigWin' ? '★ BIG WIN' : w.impact === 'Meeting' ? '◈ MEETING' : w.impact.toUpperCase();
       const dateStr = new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const timeStr = w.time ? ` · ${w.time}` : '';
       out += `  [${dateStr}] [${imp}]${timeStr} [${w.cat}]\n  ${w.text}\n\n`;
