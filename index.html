@@ -554,6 +554,14 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .personal-row.is-personal {
+    background: #FBF4EB;
+    border-color: var(--sand);
   }
   .personal-check {
     appearance: none;
@@ -665,7 +673,7 @@
       <button class="impact-btn" data-impact="BigWin" onclick="selectImpact('BigWin')">★ Big Win</button>
       <button class="add-btn"    onclick="addWin()">+ Add Win</button>
     </div>
-    <div class="personal-row">
+    <div class="personal-row" id="personalRow">
       <input type="checkbox" class="personal-check" id="personalCheck" onchange="togglePersonalLabel()" />
       <label class="personal-label" id="personalLabel" for="personalCheck">Personal win</label>
     </div>
@@ -799,6 +807,8 @@ let scriptUrl      = '';
 /* ── Bootstrap ── */
 function load() {
   try { wins = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { wins = []; }
+  wins.forEach(w => { if (w.personal === undefined) w.personal = false; });
+  save();
   scriptUrl = localStorage.getItem(URL_KEY) || '';
   if (scriptUrl) document.getElementById('scriptUrl').value = scriptUrl;
   selectImpact('Medium');
@@ -812,6 +822,7 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(wins)); }
 function togglePersonalLabel() {
   const checked = document.getElementById('personalCheck').checked;
   document.getElementById('personalLabel').className = 'personal-label' + (checked ? ' is-personal' : '');
+  document.getElementById('personalRow').className   = 'personal-row'   + (checked ? ' is-personal' : '');
 }
 
 /* ── Content tab (Work / Personal) ── */
@@ -849,6 +860,7 @@ function addWin() {
   document.getElementById('winText').value = '';
   document.getElementById('personalCheck').checked = false;
   togglePersonalLabel();
+  document.getElementById('personalRow').className = 'personal-row';
   if (personal) setContentTab('personal'); else setContentTab('work');
   render();
   fireConfetti();
