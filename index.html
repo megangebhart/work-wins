@@ -548,6 +548,10 @@
     margin-top: auto;
   }
 
+  .time-btn { background: transparent; border: 1px solid var(--linen-border); border-radius: 20px; padding: 0.35rem 0.8rem; font-size: 12px; color: var(--ink-light); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .time-btn:hover { border-color: var(--sand); color: var(--ink); }
+  .time-btn.sel-time { background: #F0E8DC; border-color: var(--sand); color: #7A5F38; }
+
   /* ── Personal checkbox ── */
   .personal-row {
     display: flex;
@@ -670,6 +674,15 @@
       <label class="personal-label" id="personalLabel" for="personalCheck">Personal win</label>
     </div>
     <div class="impact-row">
+      <span class="impact-label">Time:</span>
+      <button class="time-btn" data-time="1 min"    onclick="selectTime('1 min')">1 min</button>
+      <button class="time-btn" data-time="5 min"    onclick="selectTime('5 min')">5 min</button>
+      <button class="time-btn" data-time="15 min"   onclick="selectTime('15 min')">15 min</button>
+      <button class="time-btn" data-time="30 min"   onclick="selectTime('30 min')">30 min</button>
+      <button class="time-btn" data-time="1 hour"   onclick="selectTime('1 hour')">1 hour</button>
+      <button class="time-btn" data-time="Afternoon" onclick="selectTime('Afternoon')">Afternoon</button>
+    </div>
+    <div class="impact-row">
       <span class="impact-label">Impact:</span>
       <button class="impact-btn" data-impact="Low"    onclick="selectImpact('Low')">Low</button>
       <button class="impact-btn" data-impact="Medium" onclick="selectImpact('Medium')">Medium</button>
@@ -720,7 +733,7 @@
       <div class="step-num">一</div>
       <div class="step-body">
         <div class="step-title">Create a Google Sheet</div>
-        <div class="step-desc">Go to <strong>sheets.google.com</strong> → New blank spreadsheet. Name it "Work Wins". Rename the default tab to <em>Work</em>, then add a second tab called <em>Personal</em>. In row 1 of each tab add headers: <em>Date, Win, Category, Impact, Synced</em></div>
+        <div class="step-desc">Go to <strong>sheets.google.com</strong> → New blank spreadsheet. Name it "Work Wins". Rename the default tab to <em>Work</em>, then add a second tab called <em>Personal</em>. In row 1 of each tab add headers: <em>Date, Win, Category, Impact, Time, Synced</em></div>
       </div>
     </div>
 
@@ -739,6 +752,7 @@
     p.win    || '',
     p.cat    || '',
     p.impact || '',
+    p.time   || '',
     'Synced'
   ]);
   return ContentService
@@ -798,6 +812,7 @@ const URL_KEY     = 'workwins_scriptUrl';
 
 let wins           = [];
 let selectedImpact = 'Medium';
+let selectedTime   = '';
 let activeFilterWork     = 'all';
 let activeFilterPersonal = 'all';
 let activeContentTab = 'work';
@@ -849,6 +864,14 @@ function selectImpact(v) {
   });
 }
 
+/* ── Time selector ── */
+function selectTime(v) {
+  selectedTime = selectedTime === v ? '' : v;
+  document.querySelectorAll('.time-btn').forEach(b => {
+    b.className = 'time-btn' + (b.dataset.time === selectedTime ? ' sel-time' : '');
+  });
+}
+
 /* ── Add win ── */
 function addWin() {
   const text = document.getElementById('winText').value.trim();
@@ -856,12 +879,14 @@ function addWin() {
   const cat      = document.getElementById('catText').value.trim() || 'General';
   const checkbox = document.getElementById('personalCheck');
   const personal = checkbox.checked === true;
-  wins.unshift({ id: Date.now(), text, cat, impact: selectedImpact, date: new Date().toISOString(), synced: false, personal: personal });
+  wins.unshift({ id: Date.now(), text, cat, impact: selectedImpact, time: selectedTime, date: new Date().toISOString(), synced: false, personal: personal });
   save();
   document.getElementById('winText').value = '';
   checkbox.checked = false;
   togglePersonalLabel();
   document.getElementById('personalRow').className = 'personal-row';
+  selectedTime = '';
+  document.querySelectorAll('.time-btn').forEach(b => b.className = 'time-btn');
   if (personal) setContentTab('personal'); else setContentTab('work');
   render();
   fireConfetti();
@@ -945,6 +970,7 @@ function buildList(listId, items, emptyMsg) {
           <span class="win-cat">${esc(w.cat)}</span>
           <span class="win-date">${dateStr}</span>
           <span class="win-impact-lbl">${impLabel}</span>
+          ${w.time ? `<span style="font-size:10px;color:var(--ink-faint);">⏱ ${esc(w.time)}</span>` : ''}
           ${syncBadge}
         </div>
       </div>
@@ -1007,7 +1033,7 @@ function doSync() {
   let done = 0;
   pending.forEach((w, i) => {
     setTimeout(() => {
-      const params = new URLSearchParams({ date: w.date, win: w.text, cat: w.cat, impact: w.impact, type: w.personal ? 'personal' : 'work' });
+      const params = new URLSearchParams({ date: w.date, win: w.text, cat: w.cat, impact: w.impact, time: w.time || '', type: w.personal ? 'personal' : 'work' });
       const tab = window.open(scriptUrl + '?' + params.toString(), '_blank');
       setTimeout(() => { try { tab && tab.close(); } catch(e) {} }, 2500);
       w.synced = true;
@@ -1051,7 +1077,8 @@ function renderExport() {
     ww.forEach(w => {
       const imp     = w.impact === 'BigWin' ? '★ BIG WIN' : w.impact.toUpperCase();
       const dateStr = new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      out += `  [${dateStr}] [${imp}] [${w.cat}]\n  ${w.text}\n\n`;
+      const timeStr = w.time ? ` · ${w.time}` : '';
+      out += `  [${dateStr}] [${imp}]${timeStr} [${w.cat}]\n  ${w.text}\n\n`;
     });
   });
   document.getElementById('exportBlock').textContent = out.trim();
