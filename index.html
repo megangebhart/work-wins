@@ -548,6 +548,53 @@
     margin-top: auto;
   }
 
+  /* ── Personal checkbox ── */
+  .personal-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .personal-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border: 1px solid var(--linen-border);
+    border-radius: 4px;
+    background: var(--cream);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .personal-check:checked { background: var(--sand); border-color: var(--sand); }
+  .personal-check:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px; top: 1px;
+    width: 5px; height: 9px;
+    border: 2px solid white;
+    border-top: none; border-left: none;
+    transform: rotate(45deg);
+  }
+  .personal-label { font-size: 13px; color: var(--ink-mid); cursor: pointer; user-select: none; }
+  .personal-label.is-personal { color: var(--sand); font-weight: 500; }
+
+  .content-tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; }
+  .content-tab {
+    padding: 0.4rem 1.1rem;
+    border-radius: 20px;
+    border: 1px solid var(--linen-border);
+    background: transparent;
+    font-size: 12px;
+    color: var(--ink-light);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .content-tab.work-active { background: var(--ink); border-color: var(--ink); color: var(--linen); }
+  .content-tab.personal-active { background: var(--sand); border-color: var(--sand); color: white; }
+
   /* ── Confetti ── */
   #confettiCanvas {
     position: fixed;
@@ -584,7 +631,7 @@
   <div class="stats-bar">
     <div class="stat-card">
       <div class="stat-num" id="statTotal">0</div>
-      <div class="stat-label">Total Wins</div>
+      <div class="stat-label">Work Wins</div>
     </div>
     <div class="stat-card">
       <div class="stat-num" id="statWeek">0</div>
@@ -618,6 +665,10 @@
       <button class="impact-btn" data-impact="BigWin" onclick="selectImpact('BigWin')">★ Big Win</button>
       <button class="add-btn"    onclick="addWin()">+ Add Win</button>
     </div>
+    <div class="personal-row">
+      <input type="checkbox" class="personal-check" id="personalCheck" onchange="togglePersonalLabel()" />
+      <label class="personal-label" id="personalLabel" for="personalCheck">Personal win</label>
+    </div>
 
     <div class="sync-bar">
       <div class="sync-dot" id="syncDot"></div>
@@ -625,13 +676,28 @@
       <button class="sync-btn" id="syncBtn" onclick="doSync()">Sync to Sheets</button>
     </div>
 
-    <div class="filter-row" id="filterRow"></div>
-    <div class="wins-list" id="winsList"></div>
+    <div class="content-tabs">
+      <button class="content-tab work-active" id="ctWork" onclick="setContentTab('work')">Work</button>
+      <button class="content-tab" id="ctPersonal" onclick="setContentTab('personal')">Personal</button>
+    </div>
+
+    <div id="paneWork">
+      <div class="filter-row" id="filterRowWork"></div>
+      <div class="wins-list" id="winsListWork"></div>
+    </div>
+    <div id="panePersonal" style="display:none;">
+      <div class="filter-row" id="filterRowPersonal"></div>
+      <div class="wins-list" id="winsListPersonal"></div>
+    </div>
   </div>
 
   <!-- Export Tab -->
   <div id="tab-export" class="section" style="display:none;">
     <p class="export-label">Weekly summary — ready to paste into Slack, a 1:1 doc, or email.</p>
+    <div class="content-tabs">
+      <button class="content-tab work-active" id="expCtWork" onclick="setExportTab('work')">Work</button>
+      <button class="content-tab" id="expCtPersonal" onclick="setExportTab('personal')">Personal</button>
+    </div>
     <div class="export-block" id="exportBlock"></div>
     <button class="copy-btn" onclick="copyExport()">Copy to Clipboard</button>
   </div>
@@ -646,7 +712,7 @@
       <div class="step-num">一</div>
       <div class="step-body">
         <div class="step-title">Create a Google Sheet</div>
-        <div class="step-desc">Go to <strong>sheets.google.com</strong> → New blank spreadsheet. Name it "Work Wins". In row 1, add headers: <em>Date, Win, Category, Impact, Synced</em></div>
+        <div class="step-desc">Go to <strong>sheets.google.com</strong> → New blank spreadsheet. Name it "Work Wins". Rename the default tab to <em>Work</em>, then add a second tab called <em>Personal</em>. In row 1 of each tab add headers: <em>Date, Win, Category, Impact, Synced</em></div>
       </div>
     </div>
 
@@ -656,9 +722,10 @@
         <div class="step-title">Open Apps Script</div>
         <div class="step-desc">Inside your sheet: <strong>Extensions → Apps Script</strong>. Delete any existing code and paste this:</div>
         <div class="code-block">function doGet(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sh = ss.getActiveSheet();
-  const p  = e.parameter;
+  const ss       = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = e.parameter.type === 'personal' ? 'Personal' : 'Work';
+  const sh       = ss.getSheetByName(sheetName) || ss.getActiveSheet();
+  const p        = e.parameter;
   sh.appendRow([
     p.date   || new Date().toISOString(),
     p.win    || '',
@@ -707,6 +774,11 @@
       · localStorage key is <code>workwins_v3</code> — don't change it or you'll lose saved wins.<br>
       · Sync regularly — localStorage clears when the browser cache is cleared.
     </div>
+
+    <div id="savedUrlInfo" style="margin-top:1rem;padding:0.75rem 1rem;background:var(--cream);border:1px solid var(--linen-border);border-radius:var(--border-r);display:none;">
+      <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-light);margin-bottom:4px;">Saved Apps Script URL</div>
+      <a id="savedUrlLink" href="#" target="_blank" style="font-size:12px;color:var(--sage);word-break:break-all;text-decoration:none;border-bottom:1px solid var(--linen-border);">—</a>
+    </div>
   </div>
 
   <div class="footer">一日一善 · One good deed a day</div>
@@ -718,7 +790,10 @@ const URL_KEY     = 'workwins_scriptUrl';
 
 let wins           = [];
 let selectedImpact = 'Medium';
-let activeFilter   = 'all';
+let activeFilterWork     = 'all';
+let activeFilterPersonal = 'all';
+let activeContentTab = 'work';
+let activeExportTab  = 'work';
 let scriptUrl      = '';
 
 /* ── Bootstrap ── */
@@ -727,10 +802,33 @@ function load() {
   scriptUrl = localStorage.getItem(URL_KEY) || '';
   if (scriptUrl) document.getElementById('scriptUrl').value = scriptUrl;
   selectImpact('Medium');
+  renderSavedUrl();
   render();
 }
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(wins)); }
+
+/* ── Personal checkbox ── */
+function togglePersonalLabel() {
+  const checked = document.getElementById('personalCheck').checked;
+  document.getElementById('personalLabel').className = 'personal-label' + (checked ? ' is-personal' : '');
+}
+
+/* ── Content tab (Work / Personal) ── */
+function setContentTab(t) {
+  activeContentTab = t;
+  document.getElementById('paneWork').style.display     = t === 'work'     ? '' : 'none';
+  document.getElementById('panePersonal').style.display = t === 'personal' ? '' : 'none';
+  document.getElementById('ctWork').className     = 'content-tab' + (t === 'work'     ? ' work-active'     : '');
+  document.getElementById('ctPersonal').className = 'content-tab' + (t === 'personal' ? ' personal-active' : '');
+}
+
+function setExportTab(t) {
+  activeExportTab = t;
+  document.getElementById('expCtWork').className     = 'content-tab' + (t === 'work'     ? ' work-active'     : '');
+  document.getElementById('expCtPersonal').className = 'content-tab' + (t === 'personal' ? ' personal-active' : '');
+  renderExport();
+}
 
 /* ── Impact selector ── */
 function selectImpact(v) {
@@ -744,10 +842,14 @@ function selectImpact(v) {
 function addWin() {
   const text = document.getElementById('winText').value.trim();
   if (!text) return;
-  const cat = document.getElementById('catText').value.trim() || 'General';
-  wins.unshift({ id: Date.now(), text, cat, impact: selectedImpact, date: new Date().toISOString(), synced: false });
+  const cat      = document.getElementById('catText').value.trim() || 'General';
+  const personal = document.getElementById('personalCheck').checked;
+  wins.unshift({ id: Date.now(), text, cat, impact: selectedImpact, date: new Date().toISOString(), synced: false, personal });
   save();
   document.getElementById('winText').value = '';
+  document.getElementById('personalCheck').checked = false;
+  togglePersonalLabel();
+  if (personal) setContentTab('personal'); else setContentTab('work');
   render();
   fireConfetti();
 }
@@ -772,37 +874,52 @@ function render() {
 
 function renderStats() {
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  document.getElementById('statTotal').textContent = wins.length;
-  document.getElementById('statWeek').textContent  = wins.filter(w => new Date(w.date).getTime() > weekAgo).length;
-  document.getElementById('statBig').textContent   = wins.filter(w => w.impact === 'BigWin').length;
+  const work = wins.filter(w => !w.personal);
+  document.getElementById('statTotal').textContent = work.length;
+  document.getElementById('statWeek').textContent  = work.filter(w => new Date(w.date).getTime() > weekAgo).length;
+  document.getElementById('statBig').textContent   = work.filter(w => w.impact === 'BigWin').length;
 }
 
 function renderFilters() {
-  const cats = [...new Set(wins.map(w => w.cat))];
-  const row = document.getElementById('filterRow');
-  let html = `<button class="filter-chip${activeFilter === 'all' ? ' active' : ''}" onclick="setFilter('all')">All</button>`;
+  const workCats     = [...new Set(wins.filter(w => !w.personal).map(w => w.cat))];
+  const personalCats = [...new Set(wins.filter(w =>  w.personal).map(w => w.cat))];
+  buildFilterRow('filterRowWork',     workCats,     activeFilterWork,     'work');
+  buildFilterRow('filterRowPersonal', personalCats, activeFilterPersonal, 'personal');
+}
+
+function buildFilterRow(rowId, cats, active, type) {
+  const row = document.getElementById(rowId);
+  let html = `<button class="filter-chip${active === 'all' ? ' active' : ''}" onclick="setFilter('all','${type}')">All</button>`;
   cats.forEach(c => {
-    html += `<button class="filter-chip${activeFilter === c ? ' active' : ''}" onclick="setFilter(${JSON.stringify(c)})">${esc(c)}</button>`;
+    html += `<button class="filter-chip${active === c ? ' active' : ''}" onclick="setFilter(${JSON.stringify(c)},${JSON.stringify(type)})">${esc(c)}</button>`;
   });
   row.innerHTML = html;
 }
 
-function setFilter(f) { activeFilter = f; renderFilters(); renderList(); }
+function setFilter(f, type) {
+  if (type === 'work') activeFilterWork = f;
+  else activeFilterPersonal = f;
+  renderFilters();
+  renderList();
+}
 
 function renderList() {
-  const filtered = activeFilter === 'all' ? wins : wins.filter(w => w.cat === activeFilter);
-  const list = document.getElementById('winsList');
+  const workWins     = wins.filter(w => !w.personal);
+  const personalWins = wins.filter(w =>  w.personal);
+  const filteredWork     = activeFilterWork     === 'all' ? workWins     : workWins.filter(w => w.cat === activeFilterWork);
+  const filteredPersonal = activeFilterPersonal === 'all' ? personalWins : personalWins.filter(w => w.cat === activeFilterPersonal);
+  buildList('winsListWork',     filteredWork,     'No work wins yet · log your first one');
+  buildList('winsListPersonal', filteredPersonal, 'No personal wins yet');
+}
 
-  if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state">
-      <span class="empty-kanji">無</span>
-      <span class="empty-text">No wins logged yet · Start with today</span>
-    </div>`;
+function buildList(listId, items, emptyMsg) {
+  const list = document.getElementById(listId);
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-state"><span class="empty-kanji">無</span><span class="empty-text">${emptyMsg}</span></div>`;
     return;
   }
-
-  list.innerHTML = filtered.map(w => {
-    const dateStr = new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  list.innerHTML = items.map(w => {
+    const dateStr  = new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const impLabel = w.impact === 'BigWin' ? '★ Big Win' : w.impact;
     const syncBadge = w.synced
       ? `<span class="synced">✓ synced</span>`
@@ -851,7 +968,20 @@ function saveUrl() {
   scriptUrl = u;
   localStorage.setItem(URL_KEY, u);
   renderSyncBar();
+  renderSavedUrl();
   alert('URL saved! Head to the Wins tab to sync.');
+}
+
+function renderSavedUrl() {
+  const box  = document.getElementById('savedUrlInfo');
+  const link = document.getElementById('savedUrlLink');
+  if (scriptUrl) {
+    box.style.display   = '';
+    link.textContent    = scriptUrl;
+    link.href           = scriptUrl;
+  } else {
+    box.style.display = 'none';
+  }
 }
 
 /* ── Sync ── */
@@ -864,7 +994,7 @@ function doSync() {
   let done = 0;
   pending.forEach((w, i) => {
     setTimeout(() => {
-      const params = new URLSearchParams({ date: w.date, win: w.text, cat: w.cat, impact: w.impact });
+      const params = new URLSearchParams({ date: w.date, win: w.text, cat: w.cat, impact: w.impact, type: w.personal ? 'personal' : 'work' });
       const tab = window.open(scriptUrl + '?' + params.toString(), '_blank');
       setTimeout(() => { try { tab && tab.close(); } catch(e) {} }, 2500);
       w.synced = true;
@@ -891,9 +1021,10 @@ function showTab(t) {
 
 /* ── Export ── */
 function renderExport() {
-  if (!wins.length) { document.getElementById('exportBlock').textContent = 'No wins logged yet.'; return; }
+  const subset = wins.filter(w => activeExportTab === 'personal' ? w.personal : !w.personal);
+  if (!subset.length) { document.getElementById('exportBlock').textContent = 'No wins logged yet.'; return; }
   const byWeek = {};
-  wins.forEach(w => {
+  subset.forEach(w => {
     const d   = new Date(w.date);
     const mon = new Date(d);
     mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
