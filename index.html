@@ -665,6 +665,10 @@
       <input type="text" class="cat-input" id="catText" placeholder="Category" list="cat-list" />
       <datalist id="cat-list"></datalist>
     </div>
+    <div class="personal-row" id="personalRow">
+      <input type="checkbox" class="personal-check" id="personalCheck" onchange="togglePersonalLabel()" />
+      <label class="personal-label" id="personalLabel" for="personalCheck">Personal win</label>
+    </div>
     <div class="impact-row">
       <span class="impact-label">Impact:</span>
       <button class="impact-btn" data-impact="Low"    onclick="selectImpact('Low')">Low</button>
@@ -672,10 +676,6 @@
       <button class="impact-btn" data-impact="High"   onclick="selectImpact('High')">High</button>
       <button class="impact-btn" data-impact="BigWin" onclick="selectImpact('BigWin')">★ Big Win</button>
       <button class="add-btn"    onclick="addWin()">+ Add Win</button>
-    </div>
-    <div class="personal-row" id="personalRow">
-      <input type="checkbox" class="personal-check" id="personalCheck" onchange="togglePersonalLabel()" />
-      <label class="personal-label" id="personalLabel" for="personalCheck">Personal win</label>
     </div>
 
     <div class="sync-bar">
@@ -854,11 +854,12 @@ function addWin() {
   const text = document.getElementById('winText').value.trim();
   if (!text) return;
   const cat      = document.getElementById('catText').value.trim() || 'General';
-  const personal = document.getElementById('personalCheck').checked;
-  wins.unshift({ id: Date.now(), text, cat, impact: selectedImpact, date: new Date().toISOString(), synced: false, personal });
+  const checkbox = document.getElementById('personalCheck');
+  const personal = checkbox.checked === true;
+  wins.unshift({ id: Date.now(), text, cat, impact: selectedImpact, date: new Date().toISOString(), synced: false, personal: personal });
   save();
   document.getElementById('winText').value = '';
-  document.getElementById('personalCheck').checked = false;
+  checkbox.checked = false;
   togglePersonalLabel();
   document.getElementById('personalRow').className = 'personal-row';
   if (personal) setContentTab('personal'); else setContentTab('work');
